@@ -1,8 +1,8 @@
-# HDL-C - High-definition likelihood inference of colocalization reveals protein biomarkers for human complex diseases
+# HDL-C: High-definition likelihood inference of genetic colocalization
 
 
 ## Introduction
-The HDL-C method extends HDL-L by optimizing the likelihood conditioning on a high point estimate of local genetic correlation and assesses the statistical evidence that the two traits not only exhibit correlated genetic effects but are likely influenced by shared causal variants.
+The HDL-C method extends [HDL-L](https://www.nature.com/articles/s41588-025-02123-3) by optimizing the likelihood conditioning on a high point estimate of local genetic correlation and assesses the statistical evidence that the two traits not only exhibit correlated genetic effects but are likely influenced by shared causal variants.
 
 By focusing testing power on regions with observed strong local genetic correlation, HDL-C enhances specificity and interpretability in detecting colocalized signals. This targeted framework improves causal inference in pleiotropic architectures, supporting more informed discovery of biomarkers and therapeutic targets.
 
@@ -24,64 +24,26 @@ tidyverse
 ```
 
 ## Installation 
-HDL-L can be easily installed from GitHub using the `remotes` package. If you don't already have `remotes` installed, the following commands will manage the installation for you:
+HDL-C can be easily installed from GitHub using the `remotes` package. If you don't already have `remotes` installed, the following commands will manage the installation for you:
 ```R
 if (!requireNamespace("remotes", quietly = TRUE))
     install.packages("remotes")
 
-remotes::install_github("YuyingLi-X/HDL-L")
-library(HDLL)  #Notice: The name of the R package without `-`
+remotes::install_github("YuyingLi-X/HDL-C")
+library(HDLC)  #Notice: The name of the R package without `-`
 ```
 This installation process only takes a few minutes.
 
 
-## Quick vignette
-You will need the reference panel and linkage disequilibrium (LD) data for each region about the European ancestry population from the UK Biobank. We have developed an LD reference panel specifically tailored for cis-protein quantitative trait loci (cis-pQTL) analysis. This new panel was constructed using data from the Olink Proteomics proximity extension assay (PEA), focusing on approximately 3,000 proteins in the Olink® Explore panel. It can be downloaded from [Zenodo](https://zenodo.org/records/14209926). 
-
-For a detailed, step-by-step tutorial on how to conduct your analysis using HDL-L, please refer to our comprehensive guide available below. This demo only takes a few minutes.
-
-```R
-# Load required libraries
-library(dplyr)
-library(data.table)
-library(tidyverse)
-
-# Load example GWAS summary statistics for basal metabolic rate
-data(gwas1.example)
-
-# Load example GWAS summary statistics for standing height
-data(gwas2.example)
-
-# Specify the paths to the LD and bim files
-LD.path <- "/Path/to/LD/LD.path/"
-bim.path <- "/Path/to/bim/bim.path/"
-
-# Run HDL-L analysis
-res.HDL <- HDL.C(
-  gwas1.example, gwas2.example, 
-  Trait1name = "Basal metabolic rate",  
-  Trait2name = "Standing height", 
-  LD.path = LD.path, 
-  bim.path = bim.path, 
-  chr = 1, 
-  piece = 3, 
-  N0 = 0
-)
-
-# View the results
-print(res.HDL)
-
-```
-
 ## Tutorial
-Here, we provide a step-by-step tutorial for HDL-L and a real data example at the end. Before you begin your analysis, ensure that you have the necessary resources downloaded, so you need to download the reference panel and LD at first: 
+Here, we provide a step-by-step tutorial for HDL-C and a real data example at the end. Before you begin your analysis, ensure that you have the necessary resources downloaded, so you need to download the reference panel and LD at first: 
+
 ### Step 1: Reference panel and local region definition
-As with HDL-L, we already prepared the pre-computed reference panel and LD for each protein in UKB-PPP. You can download it from [Zenodo](https://zenodo.org/records/14209926).
+As with HDL-L, we have already prepared the pre-computed reference panel and LD for each protein in UKB-PPP. You can download it from [Zenodo](https://zenodo.org/records/14209926).
 
 In the "LD.path", it includes LD files, eigenvectors, and eigen matrices for all local regions, ending with "_LDSVD.rda"
 
 In the "bim.path", it includes bim files for local regions, which helps to clean the summary statistics data and check if there are multiallelic or duplicated SNPs
-
 
 If you want to build a reference panel for your predefined loci, you can use compute_ld_eigen.R
 
@@ -112,52 +74,69 @@ The summary statistics should look like (b and se can be absent in this example 
 ## 6  rs4970383  A  C 205475 0.004685 0.003582 1.3080
 ```
 
-You can use `HDL.L.data.wrangling.R` to do data wrangling for data from [the Neale Lab round 2 GWAS of UK Biobank](https://docs.google.com/spreadsheets/d/1kvPoupSzsSFBNSztMzl04xMoSC3Kcx3CrjVf4yBmESU/edit?ts=5b5f17db#gid=227859291) using commands.
-```bash
-Rscript /Path/to/HDL/HDL.L.data.wrangling.R \
-gwas.file=/Path/to/gwas/data/datafile \
-LD.path=/Path/to/LD.path/ \
-GWAS.type=UKB.Neale \
-output.file=/Path/to/gwas/gwas1 \
-log.file=/Path/to/log/gwas1
-```
+You can use `HDL.data.wrangling.R` in HDL git repository to do data wrangling for data from [the Neale Lab round 2 GWAS of UK Biobank](https://docs.google.com/spreadsheets/d/1kvPoupSzsSFBNSztMzl04xMoSC3Kcx3CrjVf4yBmESU/edit?ts=5b5f17db#gid=227859291) 
 
-If the GWAS is from other sources, you need to explicitly tell `HDL.L.data.wrangling.R` how to understand the variable names in the GWAS. Other than this, the syntax is the same as that in the previous section. For example, if your GWAS looks like this:
+You can follow the [instruction](https://github.com/zhenin/HDL/wiki/Format-of-summary-statistics) to format raw GWAS summary statistics into HDL and HDL-C input.
+
+For example 
+
 ```R
-##         rsid alt ref  tstat n_complete_samples     beta       se
-## 1  rs3131962   G   A 0.2187             205475 0.001004 0.004590
-## 2 rs12562034   A   G 1.0740             205475 0.005382 0.005011
-## 3 rs11240779   A   G 0.6119             205475 0.002259 0.003691
-## 4 rs57181708   G   A 1.0562             205475 0.005401 0.005114
-## 5  rs4422948   G   A 1.4893             205475 0.005368 0.003604
-## 6  rs4970383   A   C 1.3080             205475 0.004685 0.003582
+system("Rscript /Path/to/HDL.data.wrangling.R gwas.file=/Path/to/I25.gwas.imputed_v3.male.tsv.bgz LD.path=/Path/to/UKB_imputed_SVD_eigen99_extraction GWAS.type=UKB.Neale output.file=/Path/to/output/file/I25 log.file=/Path/to/output")
+
 ```
 
-You should use the below command to run HDL.L.data.wrangling.R
-```bash
-Rscript /Path/to/HDL/HDL.L.data.wrangling.R \
-gwas.file=/Path/to/gwas/data/datafile \
-LD.path=/Path/to/LD.path/ \
-SNP=rsid A1=alt A2=ref N=n_complete_samples Z=tstat \
-output.file=/Path/to/gwas/gwas1 \
-log.file=/Path/to/log/gwas1
+### Step 3: Running HDL.C
+**For one protein**
+```r
+# Load required libraries
+library(HDLC)
+library(dplyr)
+library(data.table)
+
+# Load example data in the package
+data(gwas1.df)  # For "Protein CELSR2"
+data(gwas2.df)  # For "Trait B"
+
+# Paths to the LD reference and bim files
+LD.path  <- "/Path/to/LD/LD.path/"
+bim.path <- "/Path/to/bim/bim.path/"
+chr = 1
+proname = "CELSR2"
+res <- HDL.C(
+  gwas1      = gwas1.df,     # Replace with your loaded data
+  gwas2      = gwas2.df,     # Replace with your loaded data
+  Trait1name = "CELSR2",
+  Trait2name = "I25",
+  LD.path    = LD.path,
+  bim.path   = bim.path,
+  chr        = chr,
+  proname      = proname,
+  N0          = 0
+)
+print(res)
+```
+The output of the HDL.C is:
+
+```R
+Analysis starts on Fri May 23 04:06:28 2025 
+0 SNPs were removed in GWAS 1 due to missing N or missing test statistic.  
+0 SNPs were removed in GWAS 2 due to missing N or missing test statistic.  
+689 out of 689 (100%) SNPs in reference panel are available in GWAS 1.  
+689 out of 689 (100%) SNPs in reference panel are available in GWAS 2.  
+
+
+Estimates: 
+Heritability of phenotype 1: 0.1167, P = 2.34e-38 
+Heritability of phenotype 2: 6e-04, P = 4e-04 
+Genetic Correlation: -0.9364, 95% confidence interval (-1, -0.7126), P = 5.86e-09 
+Evidence for colocalization: *****  
+
+Analysis finished at Fri May 23 04:06:30 2025 
 ```
 
-or
+The level of evidence for colocalization is reported on a five-star scale ranging from "None" (no evidence) to "*****" (very strong evidence), providing an interpretable summary of the statistical and genetic support for shared causal variants.
 
-```bash
-Rscript /Path/to/HDL/HDL.L.data.wrangling.R \
-gwas.file=/Path/to/gwas/data/datafile \
-LD.path=/Path/to/LD.path/ \
-SNP=rsid A1=alt A2=ref N=n_complete_samples b=beta se=se \
-output.file=/Path/to/gwas/gwas1 \
-log.file=/Path/to/log/gwas1
-```
-
-
-### Step 3: Running HDL.C on each region
-
-You can execute HDL.C on the entire genome or specific regions to obtain results. It is optimized for parallel processing, allowing users to configure the execution to utilize multiple cores. When utilizing a single core, the typical computational time for analyzing all local regions is estimated at approximately 1.5 hours. Users are encouraged to exploit the parallel processing capabilities of their systems by allocating additional cores, thereby reducing the overall computation time. Detailed procedural guidance is provided in the example below.
+The “prolist.rda” file includes all protein names and chromosome annotations.
 
 The HDL.C function takes several arguments as outlined below:
 
@@ -194,10 +173,10 @@ Sample size of the reference sample where LD is computed. If the default UK Biob
 Number of individuals included in both cohorts.
 
 9. **output.file**
-Location where the log and results should be written. If you do not specify a file, the log will be printed on the console.
+Location where the log and results should be written. If you do not specify a file, the log will be printed on the console. The default is NULL.
 
 10. **eigen.cut**
-Specifies which eigenvalues and eigenvectors in each LD score matrix should be used for HDL. The default value is 0.95. Users are allowed to specify a numeric value between 0 and 1 for eigen.cut.
+Specifies which eigenvalues and eigenvectors in each LD score matrix should be used for HDL. The default value is 0.99. Users are allowed to specify a numeric value between 0 and 1 for eigen.cut.
 
 11. **intercept.output**
 Logical, `FALSE` by default. Determines whether the intercept terms are included in the result `estimates.df` or not.
@@ -214,100 +193,11 @@ The chromosome to which the region belongs.
 15. **piece**
 The piece of the genome to which the region belongs. The whole genome is divided into 2,476 smaller, semi-independent blocks, each defined by LD calculated by Plink. The SNP information in each local region is included in these two data sets: "UKB_snp_counter_imputed.RData" and "UKB_snp_list_imputed_vector.RData".
 
-## Real data example
-We provide a real data example from UKBB:
-```bash
-cd /Path/to/Your/directory/
-wget https://broad-ukb-sumstats-us-east-1.s3.amazonaws.com/round2/additive-tsvs/21001_irnt.gwas.imputed_v3.female.tsv.bgz -O 21001_irnt.gwas.imputed_v3.female.tsv.bgz
-
-wget https://broad-ukb-sumstats-us-east-1.s3.amazonaws.com/round2/additive-tsvs/I9_CHD.gwas.imputed_v3.male.tsv.bgz -O I9_CHD.gwas.imputed_v3.male.tsv.bgz
-
-
-Rscript /Path/to/HDL/HDL.L.data.wrangling.R \
-gwas.file=/Path/to/gwas/21001_irnt.gwas.imputed_v3.female.tsv.bgz \
-LD.path=/Path/to/LD.path/ \
-GWAS.type=UKB.Neale \
-output.file=/Path/to/gwas/gwas1 \
-log.file=/Path/to/log/gwas1
-
-Rscript /Path/to/HDL/HDL.L.data.wrangling.R \
-gwas.file=/Path/to/gwas/I9_CHD.gwas.imputed_v3.male.tsv.bgz \
-LD.path=/Path/to/LD.path/ \
-GWAS.type=UKB.Neale \
-output.file=/Path/to/gwas/gwas2 \
-log.file=/Path/to/log/gwas2
-
-Rscript /Path/to/HDL/HDL.L.run.R \
-gwas1.df=/Path/to/gwas/gwas1.hdl.rds \
-gwas2.df=/Path/to/gwas/gwas2.hdl.rds \
-Trait1name="gwas1" \
-Trait2name="gwas2" \
-LD.path=/Path/to/LD.path/ \
-bim.path=/Path/to/bim.path/ \
-N0=0 \
-output.file=/Path/to/output/test.raw.gwas.Rout \
-type="WG" \
-cores=1 \
-save.path=/Path/to/save/result/
-```
-
-If you only want to run on a specific region, you can run this command
-
-```bash
-Rscript /Path/to/HDL/HDL.L.run.R \
-gwas1.df=/Path/to/gwas/gwas1.hdl.rds \
-gwas2.df=/Path/to/gwas/gwas2.hdl.rds \
-Trait1name="gwas1" \
-Trait2name="gwas2" \
-LD.path=/Path/to/LD.path/ \
-bim.path=/Path/to/bim.path/ \
-N0=0 \
-output.file=/Path/to/output/test.raw.gwas.Rout \
-chr=1 \
-piece=147 \
-cores=1 \
-save.path=/Path/to/save/result/
-```
-
-The results of HDL.C are saved in the save.path as a rda file and here is the output file:
-
-```R
-Attaching package: ‘data.table’
-
-The following objects are masked from ‘package:dplyr’:
-
-    between, first, last
-
-Loading GWAS1 ... 
-Loading GWAS2 ... 
-Processing chromosome 1 region 147 
-Analysis starts on Mon Apr 22 00:58:23 2024 
-0 SNPs were removed in GWAS 1 due to missing N or missing test statistic.  
-0 SNPs were removed in GWAS 2 due to missing N or missing test statistic.  
-329 out of 329 (100%) SNPs in reference panel are available in GWAS 1.  
-329 out of 329 (100%) SNPs in reference panel are available in GWAS 2.  
-
-Point estimates: 
-Heritability of phenotype 1:  8.25e-05 
-Heritability of phenotype 2:  2e-04 
-Genetic Covariance:  7.40e-05 
-Genetic Correlation:  0.6396 
-
-
-Heritability of phenotype 1:  8.25e-05 ,P:0.0893 
-Heritability of phenotype 2:  2e-04 , P:0.00e+00 
-Genetic Correlation:  0.6396 (-0.4085,1) 
-P:  0.2480275 
-
-Analysis finished at Mon Apr 22 00:58:25 2024 
-Saving results ... 
-Finished!
-```
 
 ## Citation
 If you use the HDL-C software, please cite:
-
-- Li, Y., Pawitan, Y., & Shen, X. *An enhanced framework for local genetic correlation analysis*. (2024)
+- Li Y, Zhai R, Yang Z, Li T, Pawitan Y, Shen X (2025). High-definition likelihood inference of colocalization reveals protein biomarkers for human complex diseases
+- Li, Y., Pawitan, Y. & Shen, X. An enhanced framework for local genetic correlation analysis. Nat Genet 57, 1053–1058 (2025). https://doi.org/10.1038/s41588-025-02123-3
 - Ning, Z., Pawitan, Y. & Shen, X. *High-definition likelihood inference of genetic correlations across human complex traits*. Nat Genet (2020).
 
 ## License
