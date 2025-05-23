@@ -644,13 +644,13 @@ if(converged == FALSE){
 
     evidence_for_colocalization <- case_when(
       is.na(p.h12.lrt) | is.na(rg)        ~ "NA",
-      p.h12.lrt >= 0.05 | abs(rg) <= 0.5  ~ "None",
+      p.h12.lrt >= 0.05 | abs(rg) <= 0.5  ~ " ",
       total_score >= 6                    ~ "*****",
       total_score == 5                    ~ "****",
       total_score == 4                    ~ "***",
       total_score == 3                    ~ "**",
       total_score == 2                    ~ "*",
-      TRUE                                ~ "None"
+      TRUE                                ~ " "
     )
 
 
@@ -711,6 +711,19 @@ if(!is.na(error.message.rg)){
         ", 95% confidence interval (", output(rg.lower),", ",output(rg.upper), "), P = ", output(p.h12.lrt), " \n"))
     cat("Evidence for colocalization:",
         evidence_for_colocalization, " \n")
+        cat("
+Codes:
+      |rG| 0 ' ' 0.5 '+' 0.7 '++' 0.9 '+++' 1
+P
+1
+' '          ' '     ' '     ' '      ' '
+0.05
+'+'          ' '     '*'     '**'     '***'
+0.005
+'++'         ' '     '**'    '***'    '****'
+0.0005
+'+++'        ' '     '***'   '****'   '*****'
+0  \n")
     if(h11 == 0 | h22 == 0 ){
       cat("Warning: Heritability of one trait was estimated to be 0, which may due to:
           1) The true heritability is very small;
@@ -747,7 +760,19 @@ if(!is.na(error.message.rg)){
           ", 95% confidence interval (", output(rg.lower),", ",output(rg.upper), "), P = ", output(p.h12.lrt), " \n"), file = output.file, append = TRUE)
       cat("Evidence for colocalization:",
           evidence_for_colocalization, " \n", file = output.file, append = TRUE)
-
+    cat("
+Codes:
+      |rG| 0 ' ' 0.5 '+' 0.7 '++' 0.9 '+++' 1
+P
+1
+' '          ' '     ' '     ' '      ' '
+0.05
+'+'          ' '     '*'     '**'     '***'
+0.005
+'++'         ' '     '**'    '***'    '****'
+0.0005
+'+++'        ' '     '***'   '****'   '*****'
+0  \n", file = output.file, append = TRUE)
       if(h11 == 0 | h22 == 0 ){
         cat("Warning: Heritability of one trait was estimated to be 0, which may due to:
             1) The true heritability is very low;
