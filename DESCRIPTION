@@ -1,0 +1,13 @@
+Package: HDLC
+Type: Package
+Title: High-definition likelihood inference of colocalization
+Version: 0.1.0
+Author: Yuying Li
+Maintainer: Yuying Li <yuying.li@ki.se>
+Description: The functions return estimation and standard error of local genetic correlation and heritabilities of traits based on GWAS summary statistics. Also, it provides the evidence for colocalization.
+License: GPL (>= 3)
+Depends: R (>= 4.0.0)
+Encoding: UTF-8
+LazyData: true
+NeedsCompilation: no
+RoxygenNote: 7.3.2
