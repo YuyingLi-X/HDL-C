@@ -1,5 +1,6 @@
-# HDL-C: High-definition likelihood inference of genetic colocalization
+# HDL-C <br>          _High-definition likelihood inference of genetic colocalization_
 
+<br> 
 
 ## Introduction
 The HDL-C method extends [HDL-L](https://www.nature.com/articles/s41588-025-02123-3) by optimizing the likelihood conditioning on a high point estimate of local genetic correlation and assesses the statistical evidence that the two traits not only exhibit correlated genetic effects but are likely influenced by shared causal variants.
