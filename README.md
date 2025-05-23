@@ -130,7 +130,20 @@ Estimates:
 Heritability of phenotype 1: 0.1167, P = 2.34e-38 
 Heritability of phenotype 2: 6e-04, P = 4e-04 
 Genetic Correlation: -0.9364, 95% confidence interval (-1, -0.7126), P = 5.86e-09 
-Evidence for colocalization: *****  
+Evidence for colocalization: *****
+
+Codes:
+      |rG| 0 ' ' 0.5 '+' 0.7 '++' 0.9 '+++' 1 
+P    
+1
+' '          ' '     ' '     ' '      ' '  
+0.05
+'+'          ' '     '*'     '**'     '***' 
+0.005
+'++'         ' '     '**'    '***'    '****' 
+0.0005
+'+++'        ' '     '***'   '****'   '*****' 
+0 
 
 Analysis finished at Fri May 23 04:06:30 2025 
 ```
