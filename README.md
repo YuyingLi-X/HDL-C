@@ -1,6 +1,4 @@
-# HDL-C <br>          _High-definition likelihood inference of genetic colocalization_
-
-<br> 
+# High-definition likelihood inference of genetic colocalization (HDL-C)
 
 ## Introduction
 HDL-C is a likelihood-based framework for genetic colocalization analysis that extends the high-definition likelihood local genetic correlation method [HDL-L](https://www.nature.com/articles/s41588-025-02123-3). HDL-C performs inference on whether two traits share sufficiently strong local genetic effects to warrant evidence of colocalization. 
