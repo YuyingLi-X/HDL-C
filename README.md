@@ -3,10 +3,9 @@
 <br> 
 
 ## Introduction
-The HDL-C method extends [HDL-L](https://www.nature.com/articles/s41588-025-02123-3) by optimizing the likelihood conditioning on a high point estimate of local genetic correlation and assesses the statistical evidence that the two traits not only exhibit correlated genetic effects but are likely influenced by shared causal variants.
+HDL-C is a likelihood-based framework for genetic colocalization analysis that extends the high-definition likelihood local genetic correlation method [HDL-L](https://www.nature.com/articles/s41588-025-02123-3). HDL-C performs inference on whether two traits share sufficiently strong local genetic effects to warrant evidence of colocalization. 
 
-By focusing testing power on regions with observed strong local genetic correlation, HDL-C enhances specificity and interpretability in detecting colocalized signals. This targeted framework improves causal inference in pleiotropic architectures, supporting more informed discovery of biomarkers and therapeutic targets.
-
+Unlike traditional Bayesian colocalization approaches that rely on restrictive assumptions (e.g., a single causal variant per trait), HDL-C leverages the multivariate Gaussian structure of GWAS z-scores under high-dimensional LD and formulates a constrained likelihood ratio test to evaluate whether the local genetic correlation exceeds a biologically meaningful threshold.
 
 ## System Requirements
 HDL-C requires only a standard computer with enough RAM to support the in-memory operations.
