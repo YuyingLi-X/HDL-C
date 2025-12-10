@@ -113,39 +113,6 @@ res <- HDL.C(
 )
 print(res)
 ```
-The output of the HDL.C is:
-
-```R
-Analysis starts on Fri May 23 04:06:28 2025 
-0 SNPs were removed in GWAS 1 due to missing N or missing test statistic.  
-0 SNPs were removed in GWAS 2 due to missing N or missing test statistic.  
-689 out of 689 (100%) SNPs in reference panel are available in GWAS 1.  
-689 out of 689 (100%) SNPs in reference panel are available in GWAS 2.  
-
-
-Estimates: 
-Heritability of phenotype 1: 0.1167, P = 2.34e-38 
-Heritability of phenotype 2: 6e-04, P = 4e-04 
-Genetic Correlation: -0.9364, 95% confidence interval (-1, -0.7126), P = 5.86e-09 
-Evidence for colocalization: *****
-
-Codes:
-      |rG| 0 ' ' 0.5 '+' 0.7 '++' 0.9 '+++' 1 
-P    
-1
-' '          ' '     ' '     ' '      ' '  
-0.05
-'+'          ' '     '*'     '**'     '***' 
-0.005
-'++'         ' '     '**'    '***'    '****' 
-0.0005
-'+++'        ' '     '***'   '****'   '*****' 
-0 
-
-Analysis finished at Fri May 23 04:06:30 2025 
-```
-
-The level of evidence for colocalization is reported on a five-star scale ranging from "None" (no evidence) to "*****" (very strong evidence), providing an interpretable summary of the statistical and genetic support for shared causal variants.
 
 The “prolist.rda” file includes all protein names and chromosome annotations.
 
