@@ -1,4 +1,4 @@
-#' Local version of High-definition likelihood inference of genetic correlations (HDL-L)
+#' Local version of High-definition likelihood inference of genetic correlations (HDL-C)
 #'
 #' The function returns the estimate and standard error of the genetic correlation between two traits based on GWAS summary statistics.
 #'
@@ -39,16 +39,18 @@
 #' @author Yuying Li, Xia Shen
 #'
 #' @references
-#' Li, Y., Pawitan, Y. & Shen, X. An enhanced framework for local genetic correlation analysis. Nat Genet 57, 1053–1058 (2025). https://doi.org/10.1038/s41588-025-02123-3
-#' Li Y, Zhai R, Yang Z, Li T, Pawitan Y, Shen X (2025). High-definition likelihood inference of colocalization reveals protein biomarkers for human complex diseases
+#' Li Y, Pawitan Y, Shen X (2020). An enhanced framework for local genetic correlation analysis.
+#'
 #' @seealso
-#' HDL tutorial: https://github.com/zhenin/HDL
+#' HDL tutorial: https://github.com/YuyingLi-X/HDL-L
 #' @export
 #'
 
 
-HDL.C <-function(gwas1.df, gwas2.df, Trait1name, Trait2name, LD.path, bim.path, Nref = 335272, N0, output.file = "", eigen.cut = 0.99, intercept.output = FALSE, fill.missing.N = NULL, lim = exp(-18), chr, proname, alpha = 0.05){
-    piece = proname
+HDL.C <- function(gwas1.df, gwas2.df, Trait1name, Trait2name, LD.path, bim.path,
+                  Nref = 335272, N0, output.file = "", eigen.cut = 0.99,
+                  intercept.output = FALSE, fill.missing.N = NULL, lim = exp(-18),
+                  chr, piece, alpha = 0.05, r0 = 0.5) {
     if(output.file != ""){
       if(file.exists(output.file) == T){
         system(paste0("rm ",output.file))
@@ -87,8 +89,8 @@ HDL.C <-function(gwas1.df, gwas2.df, Trait1name, Trait2name, LD.path, bim.path, 
 }
 
 
-    #Likelihood ratio function for genetic covariance estimation
-    llfun.gcov.part.2 = function(param,h11,h22,rho12, M, N1, N2, N0, Nref,
+  #Likelihood ratio function for genetic covariance estimation
+  llfun.gcov.part.2 = function(param,h11,h22,rho12, M, N1, N2, N0, Nref,
                              lam1, lam2, bstar1, bstar2, lim){
   h12 = param[1]
   int = param[2]
@@ -185,8 +187,6 @@ if(length(LD_bim_file)==0){
     snps.ref <- snps.name.list  <- snps.ref.df$id
     A2.ref <- snps.ref.df$A2
     names(A2.ref) <- snps.ref
-    if(is.data.frame(gwas1.df)!=TRUE){gwas1.df = as.data.frame(gwas1.df)}
-    if(is.data.frame(gwas2.df)!=TRUE){gwas2.df = as.data.frame(gwas2.df)}
 
     gwas1.df <- gwas1.df %>% filter(SNP %in% snps.name.list)
     gwas2.df <- gwas2.df %>% filter(SNP %in% snps.name.list)
@@ -337,6 +337,7 @@ if(length(LD_bim_file)==0){
         names(bhat1.raw) <- names(A2.gwas1) <- gwas1.df.subset$SNP
         idx.sign1 <- A2.gwas1 == A2.ref[names(A2.gwas1)]
         bhat1.raw <- bhat1.raw*(2*as.numeric(idx.sign1)-1)
+        names(bhat1.raw) <- names(A2.gwas1) <- gwas1.df.subset$SNP
 
 
         gwas2.df.subset <- gwas2.df %>% filter(SNP %in% snps.ref) %>% distinct(SNP, A1, A2, .keep_all = TRUE)
@@ -359,6 +360,7 @@ if(length(LD_bim_file)==0){
         names(bhat2.raw) <- names(A2.gwas2) <- gwas2.df.subset$SNP
         idx.sign2 <- A2.gwas2 == A2.ref[names(A2.gwas2)]
         bhat2.raw <- bhat2.raw*(2*as.numeric(idx.sign2)-1)
+        names(bhat2.raw) <- names(A2.gwas2) <- gwas2.df.subset$SNP
 
         M <- length(LDsc)
         bhat1 <- bhat2 <- numeric(M)
@@ -579,6 +581,65 @@ if(converged == FALSE){
 }
 
 }
+
+
+
+
+
+      ## -------- Constrained (null) MLE under |rG| <= r0 -----------
+      if (!is.na(h11) && !is.na(h22) && h11 > 0 && h22 > 0 && !is.na(ll_alt.h12)) {
+        h12_band <- r0 * sqrt(h11 * h22)  # band for |h12| under the null
+        best_value_band <- -Inf
+        converged_band <- FALSE
+
+        # reuse starts and ndeps heuristics
+        starting_values_1_band <- c(
+          max(-h12_band, min(h12.hdl.use[1], h12_band)),            # clamp MLE h12 into the band
+          0,                                                        # a few extras just in case
+          -0.5 * h12_band,
+          0.5  * h12_band
+        )
+        starting_values_2_band <- c(int, rho12, 0)                  # re-use intercept-ish starts
+        ndeps_values_band <- c(1e-5, 1e-8, 1e-16)
+
+        for (start_val_1 in starting_values_1_band) {
+          for (start_val_2 in starting_values_2_band) {
+            for (n_deps in ndeps_values_band) {
+              opt_band <- optim(
+                c(start_val_1, start_val_2), llfun.gcov.part.2,
+                h11 = h11.hdl.use, h22 = h22.hdl.use, rho12 = rho12,
+                M = M.ref, N1 = N1, N2 = N2, N0 = N0, Nref = Nref,
+                lam1 = unlist(lam.v.use), lam2 = unlist(lam.v.use),
+                bstar1 = unlist(bstar1.v.use), bstar2 = unlist(bstar2.v.use),
+                lim = lim, method = 'L-BFGS-B',
+                lower = c(-h12_band, -20), upper = c(h12_band, 20),
+                control = list(factr = 1e-8, maxit = 1000, trace = 0,
+                               ndeps = c(n_deps, n_deps * 100), fnscale = -1)
+              )
+              if (opt_band$convergence == 0 && opt_band$value > best_value_band) {
+                best_value_band <- opt_band$value
+                ll_null_band    <- opt_band$value
+                converged_band  <- TRUE
+              }
+            }
+          }
+        }
+
+        if (!converged_band) {
+          ll_null_band <- NA
+        }
+
+        # Constrained LRT: compare unconstrained alt vs null constrained band
+        if (!is.na(ll_null_band)) {
+          lr_12_constrained <- -2 * (ll_null_band - ll_alt.h12)
+          p.h12.lrt_constrained <- pchisq(lr_12_constrained, 1, lower.tail = FALSE)
+        } else {
+          p.h12.lrt_constrained <- NA
+        }
+      } else {
+        p.h12.lrt_constrained <- NA
+      }
+
     ##Compute LRT p-value
     lr.1 <- -2*(ll_null.1 - ll_alt.1)
     p.h1.lrt <- pchisq(lr.1, 1, lower.tail = FALSE)
@@ -621,38 +682,24 @@ if(converged == FALSE){
     rg.upper = min(1, h12.upper/sqrt(h11.LCI*h22.LCI))
     }
 
-    p_score <- case_when(
-      is.na(p.h12.lrt)         ~ -999,  # Flag missing values
-      p.h12.lrt < 0.0005        ~ 3,
-      p.h12.lrt < 0.005         ~ 2,
-      p.h12.lrt < 0.05         ~ 1,
-      TRUE                     ~ 0
-    )
 
-    rg_score <- case_when(
-      is.na(rg)                ~ -999,  # Flag missing values
-      abs(rg) > 0.9                 ~ 3,
-      abs(rg) > 0.7                 ~ 2,
-      abs(rg) > 0.5                 ~ 1,
-      TRUE                     ~ 0
-    )
+    ## Lower bound for |rG| from the two-sided CI:
+    ## If the CI crosses 0, the lower bound for |rG| is 0; otherwise it's min(abs(L), abs(U)).
+    abs_rg_lower <- if (is.na(rg.lower) || is.na(rg.upper)) {
+      NA_real_
+    } else if (rg.lower <= 0 && rg.upper >= 0) {
+      0
+    } else {
+      min(abs(rg.lower), abs(rg.upper))
+    }
 
-    total_score <- ifelse(p_score >= 0 & rg_score >= 0,
-                          p_score + rg_score,
-                          NA_integer_)
-
-
-    evidence_for_colocalization <- case_when(
-      is.na(p.h12.lrt) | is.na(rg)        ~ "NA",
-      p.h12.lrt >= 0.05 | abs(rg) <= 0.5  ~ " ",
-      total_score >= 6                    ~ "*****",
-      total_score == 5                    ~ "****",
-      total_score == 4                    ~ "***",
-      total_score == 3                    ~ "**",
-      total_score == 2                    ~ "*",
-      TRUE                                ~ " "
-    )
-
+    ## Decision for "colocalized" per your rule:
+    ## Use the original LRT H0: rG=0 p-value and require abs_rg_lower > r0.
+    HDLC_colocalized <- if (is.na(p.h12.lrt) || is.na(abs_rg_lower)) {
+      NA
+    } else {
+      (p.h12.lrt < alpha) && (abs_rg_lower > r0)
+    }
 
     if(intercept.output == T){
       h11.intercept <- h11.hdl.use[2]
@@ -670,6 +717,24 @@ if(converged == FALSE){
       }
     }
 
+    cat("\n")
+    cat("Point estimates: \n")
+    cat("Heritability of phenotype 1: ",
+        output(h11),
+        "\n")
+    cat("Heritability of phenotype 2: ",
+        output(h22),
+        "\n")
+    cat("Genetic Covariance: ",
+        output(h12),
+        "\n")
+    cat("Genetic Correlation: ",
+        output(rg),
+        "\n")
+    cat("Constrained LRT P (H0: |rG| <= r0): ", output(p.h12.lrt_constrained), "  (r0 = ", r0, ")\n", sep = "")
+    cat("Lower bound of |rG| (from LCI): ", output(abs_rg_lower), "\n")
+    cat("HDL-C colocalized (LRT rG=0 & |rG|_LB > r0): ", HDLC_colocalized, "\n")
+
     if(h11 == 0 | h22 == 0 ){
       cat("Warning: Heritability of one trait was estimated to be 0, which may due to:
           1) The true heritability is very small;
@@ -679,16 +744,55 @@ if(converged == FALSE){
     }
     cat("\n")
 
-if(intercept.output == FALSE){
-      estimates.df <- matrix(c(h11,p.h1.lrt,h22,p.h2.lrt, h12, rg, rg.lower, rg.upper, p.h12.lrt, evidence_for_colocalization), nrow=1,ncol=10)
-      colnames(estimates.df) <- c("Heritability_1","P_value_Heritability_1","Heritability_2", "P_value_Heritability_2", "Genetic_Covariance","Genetic_Correlation","Lower_bound_rg","Upper_bound_rg", "P", "Evidence_for_colocalization")
-    } else{
-      estimates.df <- matrix(c(h11,p.h1.lrt,h22,p.h2.lrt, h12, rg, rg.lower, rg.upper, p.h12.lrt,evidence_for_colocalization, h11.intercept, NA, h22.intercept, NA, h12.intercept,NA,NA,NA,NA,NA), nrow=2,ncol=10)
-      colnames(estimates.df) <- c("Heritability_1","P_value_Heritability_1", "Heritability_2", "P_value_Heritability_2", "Genetic_Covariance","Genetic_Correlation","Lower_bound_rg","Upper_bound_rg", "P", "Evidence_for_coloalization")
+    if (intercept.output == FALSE) {
+      estimates.df <- matrix(
+        c(h11, p.h1.lrt,
+          h22, p.h2.lrt,
+          h12, rg, rg.lower, rg.upper, p.h12.lrt,
+          p.h12.lrt_constrained,  # NEW
+          abs_rg_lower,           # NEW
+          r0,                     # NEW
+          as.logical(HDLC_colocalized) # NEW
+        ),
+        nrow = 1
+      )
+      colnames(estimates.df) <- c("Heritability_1","P_value_Heritability_1",
+                                  "Heritability_2","P_value_Heritability_2",
+                                  "Genetic_Covariance","Genetic_Correlation",
+                                  "Lower_bound_rg","Upper_bound_rg",
+                                  "P_rG_eq_0",
+                                  "P_constrained_band",
+                                  "Abs_rg_LB",
+                                  "r0",
+                                  "HDLC_colocalized")
+    } else {
+      # Keep your 2-row layout; append NA placeholders appropriately for the intercept row
+      estimates.df <- matrix(
+        c(h11, p.h1.lrt,
+          h22, p.h2.lrt,
+          h12, rg, rg.lower, rg.upper, p.h12.lrt,
+          p.h12.lrt_constrained, abs_rg_lower, r0, as.logical(HDLC_colocalized),
+          h11.intercept, NA,
+          h22.intercept, NA,
+          h12.intercept, NA, NA, NA, NA, NA, NA, NA, NA),
+        nrow = 2, byrow = TRUE
+      )
+      colnames(estimates.df) <- c("Heritability_1","P_value_Heritability_1",
+                                  "Heritability_2","P_value_Heritability_2",
+                                  "Genetic_Covariance","Genetic_Correlation",
+                                  "Lower_bound_rg","Upper_bound_rg",
+                                  "P_rG_eq_0",
+                                  "P_constrained_band",
+                                  "Abs_rg_LB",
+                                  "r0",
+                                  "HDLC_colocalized")
       rownames(estimates.df) <- c("Estimate", "Intercept")
     }
 
+
     end.time <- date()
+    cat("\n")
+    cat("\n")
    if(!is.na(error.message.h1)){
   cat(error.message.h1, "\n")
 }
@@ -698,32 +802,17 @@ if(!is.na(error.message.h2)){
 if(!is.na(error.message.rg)){
   cat(error.message.rg, "\n")
 }
-    cat("\n")
-    cat("Estimates: \n")
-    cat(paste0("Heritability of phenotype 1: ",
+
+    cat("Heritability of phenotype 1: ",
         output(h11),
-        ", P = ", output(p.h1.lrt), " \n"))
-    cat(paste0("Heritability of phenotype 2: ",
+        paste0(",P:", output(p.h1.lrt), " \n"))
+    cat("Heritability of phenotype 2: ",
         output(h22),
-        ", P = ", output(p.h2.lrt), " \n"))
-    cat(paste0("Genetic Correlation: ",
+        paste0(", P:", output(p.h2.lrt), " \n"))
+    cat("Genetic Correlation: ",
         output(rg),
-        ", 95% confidence interval (", output(rg.lower),", ",output(rg.upper), "), P = ", output(p.h12.lrt), " \n"))
-    cat("Evidence for colocalization:",
-        evidence_for_colocalization, " \n")
-        cat("
-Codes:
-      |rG| 0 ' ' 0.5 '+' 0.7 '++' 0.9 '+++' 1
-P
-1
-' '          ' '     ' '     ' '      ' '
-0.05
-'+'          ' '     '*'     '**'     '***'
-0.005
-'++'         ' '     '**'    '***'    '****'
-0.0005
-'+++'        ' '     '***'   '****'   '*****'
-0  \n")
+        paste0("(", output(rg.lower),",",output(rg.upper), ") \n"))
+    cat("P: ",p.h12.lrt,"\n")
     if(h11 == 0 | h22 == 0 ){
       cat("Warning: Heritability of one trait was estimated to be 0, which may due to:
           1) The true heritability is very small;
@@ -747,32 +836,17 @@ P
     cat(error.message.rg, file = output.file, append = TRUE, "\n")
     }
 
-      cat("\n")
-      cat("Estimates: \n")
-      cat(paste0("Heritability of phenotype 1: ",
-          output(h11),
-          ", P = ", output(p.h1.lrt), " \n"), file = output.file, append = TRUE)
-      cat(paste0("Heritability of phenotype 2: ",
-          output(h22),
-          ", P = ", output(p.h2.lrt), " \n"), file = output.file, append = TRUE)
-      cat(paste0("Genetic Correlation: ",
-          output(rg),
-          ", 95% confidence interval (", output(rg.lower),", ",output(rg.upper), "), P = ", output(p.h12.lrt), " \n"), file = output.file, append = TRUE)
-      cat("Evidence for colocalization:",
-          evidence_for_colocalization, " \n", file = output.file, append = TRUE)
-    cat("
-Codes:
-      |rG| 0 ' ' 0.5 '+' 0.7 '++' 0.9 '+++' 1
-P
-1
-' '          ' '     ' '     ' '      ' '
-0.05
-'+'          ' '     '*'     '**'     '***'
-0.005
-'++'         ' '     '**'    '***'    '****'
-0.0005
-'+++'        ' '     '***'   '****'   '*****'
-0  \n", file = output.file, append = TRUE)
+
+      cat("Heritability of phenotype 1: ",
+        output(h11),
+        paste0(",P:", output(p.h1.lrt), " \n"), file = output.file, append = TRUE)
+       cat("Heritability of phenotype 2: ",
+        output(h22),
+        paste0(", P:", output(p.h2.lrt), " \n"), file = output.file, append = TRUE)
+      cat("Genetic Correlation: ",
+        output(rg),
+        paste0("(", output(rg.lower),",",output(rg.upper), ") \n"), file = output.file, append = TRUE)
+      cat("P: ",p.h12.lrt,"\n", file = output.file, append = TRUE)
       if(h11 == 0 | h22 == 0 ){
         cat("Warning: Heritability of one trait was estimated to be 0, which may due to:
             1) The true heritability is very low;
