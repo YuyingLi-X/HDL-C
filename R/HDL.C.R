@@ -32,8 +32,8 @@
 #' \item{Trait1 }{The name of trait 1.}
 #' \item{Trait2 }{The name of trait 2.}
 #' \item{chr }{Which chromosome.}
-#' \item{piece }{which piece of the chromosome}
-#' \item{estimates.df }{A detailed matrix includes the estimates, P-value or likelihood-based intervals of heritability, genetic covariance and genetic correlation.}
+#' \item{piece }{which protein}
+#' \item{estimates.df }{A detailed matrix includes the estimates, P-value of heritability, genetic covariance, likelihood-based intervals of genetic correlation, and the P-value of colocalization.}
 #' \item{eigen.use }{The eigen.cut used in computation.}
 #' }
 #'
