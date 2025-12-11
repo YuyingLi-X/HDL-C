@@ -22,7 +22,7 @@
 #' @param chr The chromosome to which the region belongs.
 #' @param proname The protein name of the QTL region.
 #' @param alpha The significance level used to compute the cut-off value 'c' for the likelihood-based confidence interval (LCI). The cut-off 'c' is calculated using the formula: c = exp(-qchisq(1 - alpha, 1) / 2). For example, when alpha = 0.05, it corresponds to a 95% LCI.
-#' @param r0 A predefined genetic correlation threshold used to declare local colocalization.
+#' @param r0 A predefined genetic correlation threshold used to declare local colocalization. The default value is 0.5
 #' @note Users can download the precomputed eigenvalues and eigenvectors of LD correlation matrices for European ancestry population. The download link can be found at https://doi.org/10.5281/zenodo.14209926
 #' These are the LD matrices and their eigen-decomposition from 335,272 genomic British UK Biobank individuals.
 #'
@@ -736,8 +736,8 @@ if(converged == FALSE){
       cat("Warning: Heritability of one trait was estimated to be 0, which may due to:
           1) The true heritability is very small;
           2) The sample size is too small;
-          3) Many SNPs in the chosen reference panel misses in the GWAS;
-          4) There is a severe mismatch between the GWAS population and the population for computing reference panel")
+          3) Many SNPs in the chosen reference panel are missing in the GWAS;
+          4) There is a severe mismatch between the GWAS population and the population for computing the reference panel.")
     }
     cat("\n")
 
@@ -754,7 +754,7 @@ if(converged == FALSE){
                                   "Heritability_2","P_value_Heritability_2",
                                   "Genetic_Covariance","Genetic_Correlation",
                                   "Lower_bound_rg","Upper_bound_rg",
-                                  "P"）
+                                  "P")
     } else {
       # append NA placeholders appropriately for the intercept row
       estimates.df <- matrix(
