@@ -20,9 +20,10 @@
 #' @param fill.missing.N If NULL (default), the SNPs with missing N are removed. One of "median", "min" or "max" can be given so that the missing N will be filled accordingly. For example, "median" means the missing N are filled with the median N of the SNPs with available N.
 #' @param lim Tolerance limitation, default lim = exp(-18).
 #' @param chr The chromosome to which the region belongs.
-#' @param piece The piece of the genome to which the region belongs. The whole genome is divided into 2,468 smaller, semi-independent blocks, each defined by LD calculated by Plink. The SNP information in each local region is included in these two data sets: "UKB_snp_counter_imputed.RData" and "UKB_snp_list_imputed_vector.RData".
+#' @param proname The protein name of the QTL region.
 #' @param alpha The significance level used to compute the cut-off value 'c' for the likelihood-based confidence interval (LCI). The cut-off 'c' is calculated using the formula: c = exp(-qchisq(1 - alpha, 1) / 2). For example, when alpha = 0.05, it corresponds to a 95% LCI.
-#' @note Users can download the precomputed eigenvalues and eigenvectors of LD correlation matrices for European ancestry population. The download link can be found at https://doi.org/10.5281/zenodo.11001214
+#' @param r0 A predefined genetic correlation threshold used to declare local colocalization.
+#' @note Users can download the precomputed eigenvalues and eigenvectors of LD correlation matrices for European ancestry population. The download link can be found at https://doi.org/10.5281/zenodo.14209926
 #' These are the LD matrices and their eigen-decomposition from 335,272 genomic British UK Biobank individuals.
 #'
 #' @return A dataframe is returned with:
@@ -39,18 +40,20 @@
 #' @author Yuying Li, Xia Shen
 #'
 #' @references
-#' Li Y, Pawitan Y, Shen X (2020). An enhanced framework for local genetic correlation analysis.
+#' Li, Y., Zhai, R., Yang, Z., Li, T., Pawitan, Y. & Shen, X. (2025). High-definition likelihood inference of colocalization reveals protein biomarkers for human complex diseases.
+#' Li, Y., Pawitan, Y. & Shen, X. An enhanced framework for local genetic correlation analysis. Nat Genet 57, 1053–1058 (2025). https://doi.org/10.1038/s41588-025-02123-3
 #'
 #' @seealso
-#' HDL tutorial: https://github.com/YuyingLi-X/HDL-L
+#' HDL tutorial: https://github.com/zhenin/HDL
 #' @export
 #'
 
 
 HDL.C <- function(gwas1.df, gwas2.df, Trait1name, Trait2name, LD.path, bim.path,
-                  Nref = 335272, N0, output.file = "", eigen.cut = 0.99,
+                  Nref = 335272, N0 = 0, output.file = "", eigen.cut = 0.99,
                   intercept.output = FALSE, fill.missing.N = NULL, lim = exp(-18),
-                  chr, piece, alpha = 0.05, r0 = 0.5) {
+                  chr, proname, alpha = 0.05, r0 = 0.5) {
+
     if(output.file != ""){
       if(file.exists(output.file) == T){
         system(paste0("rm ",output.file))
@@ -159,10 +162,12 @@ find_LD_rda_file <- function(LD.files, chr, piece) {
   }
 }
 
+piece = proname
+if(r0==0) r0 = 1e-8
 # List all files in LD.path
 LD.files <- list.files(LD.path, full.names = TRUE)
 
-# Use function to find the specific LD file
+# Use a function to find the specific LD file
 LD_rda_file <- find_LD_rda_file(LD.files, chr, piece)
 
 # Load the LD file if found
@@ -693,14 +698,6 @@ if(converged == FALSE){
       min(abs(rg.lower), abs(rg.upper))
     }
 
-    ## Decision for "colocalized" per your rule:
-    ## Use the original LRT H0: rG=0 p-value and require abs_rg_lower > r0.
-    HDLC_colocalized <- if (is.na(p.h12.lrt) || is.na(abs_rg_lower)) {
-      NA
-    } else {
-      (p.h12.lrt < alpha) && (abs_rg_lower > r0)
-    }
-
     if(intercept.output == T){
       h11.intercept <- h11.hdl.use[2]
       h22.intercept <- h22.hdl.use[2]
@@ -733,7 +730,7 @@ if(converged == FALSE){
         "\n")
     cat("Constrained LRT P (H0: |rG| <= r0): ", output(p.h12.lrt_constrained), "  (r0 = ", r0, ")\n", sep = "")
     cat("Lower bound of |rG| (from LCI): ", output(abs_rg_lower), "\n")
-    cat("HDL-C colocalized (LRT rG=0 & |rG|_LB > r0): ", HDLC_colocalized, "\n")
+    
 
     if(h11 == 0 | h22 == 0 ){
       cat("Warning: Heritability of one trait was estimated to be 0, which may due to:
@@ -748,11 +745,8 @@ if(converged == FALSE){
       estimates.df <- matrix(
         c(h11, p.h1.lrt,
           h22, p.h2.lrt,
-          h12, rg, rg.lower, rg.upper, p.h12.lrt,
-          p.h12.lrt_constrained,  # NEW
-          abs_rg_lower,           # NEW
-          r0,                     # NEW
-          as.logical(HDLC_colocalized) # NEW
+          h12, rg, rg.lower, rg.upper,
+          p.h12.lrt_constrained
         ),
         nrow = 1
       )
@@ -760,32 +754,24 @@ if(converged == FALSE){
                                   "Heritability_2","P_value_Heritability_2",
                                   "Genetic_Covariance","Genetic_Correlation",
                                   "Lower_bound_rg","Upper_bound_rg",
-                                  "P_rG_eq_0",
-                                  "P_constrained_band",
-                                  "Abs_rg_LB",
-                                  "r0",
-                                  "HDLC_colocalized")
+                                  "P"）
     } else {
-      # Keep your 2-row layout; append NA placeholders appropriately for the intercept row
+      # append NA placeholders appropriately for the intercept row
       estimates.df <- matrix(
         c(h11, p.h1.lrt,
           h22, p.h2.lrt,
-          h12, rg, rg.lower, rg.upper, p.h12.lrt,
-          p.h12.lrt_constrained, abs_rg_lower, r0, as.logical(HDLC_colocalized),
+          h12, rg, rg.lower, rg.upper,
+          p.h12.lrt_constrained, 
           h11.intercept, NA,
           h22.intercept, NA,
-          h12.intercept, NA, NA, NA, NA, NA, NA, NA, NA),
+          h12.intercept, NA, NA, NA, NA),
         nrow = 2, byrow = TRUE
       )
       colnames(estimates.df) <- c("Heritability_1","P_value_Heritability_1",
                                   "Heritability_2","P_value_Heritability_2",
                                   "Genetic_Covariance","Genetic_Correlation",
                                   "Lower_bound_rg","Upper_bound_rg",
-                                  "P_rG_eq_0",
-                                  "P_constrained_band",
-                                  "Abs_rg_LB",
-                                  "r0",
-                                  "HDLC_colocalized")
+                                  "P")
       rownames(estimates.df) <- c("Estimate", "Intercept")
     }
 
@@ -812,18 +798,19 @@ if(!is.na(error.message.rg)){
     cat("Genetic Correlation: ",
         output(rg),
         paste0("(", output(rg.lower),",",output(rg.upper), ") \n"))
-    cat("P: ",p.h12.lrt,"\n")
+    cat("P: ",p.h12.lrt_constrained,"\n")
     if(h11 == 0 | h22 == 0 ){
       cat("Warning: Heritability of one trait was estimated to be 0, which may due to:
           1) The true heritability is very small;
           2) The sample size is too small;
-          3) Many SNPs in the chosen reference panel misses in the GWAS.")
+          3) Many SNPs in the chosen reference panel are missing in the GWAS.")
     }
 
     cat("\n")
     cat("Analysis finished at",end.time,"\n")
 
     if(output.file != ""){
+      cat("", file = output.file)
       cat("\n", file = output.file, append = TRUE)
       cat("\n", file = output.file, append = TRUE)
     if(!is.na(error.message.h1)){
@@ -846,13 +833,13 @@ if(!is.na(error.message.rg)){
       cat("Genetic Correlation: ",
         output(rg),
         paste0("(", output(rg.lower),",",output(rg.upper), ") \n"), file = output.file, append = TRUE)
-      cat("P: ",p.h12.lrt,"\n", file = output.file, append = TRUE)
+      cat("P: ",p.h12.lrt_constrained,"\n", file = output.file, append = TRUE)
       if(h11 == 0 | h22 == 0 ){
         cat("Warning: Heritability of one trait was estimated to be 0, which may due to:
             1) The true heritability is very low;
             2) The sample size of the GWAS is too small;
             3) Many SNPs in the chosen reference panel are absent in the GWAS;
-            4) There is a severe mismatch between the GWAS population and the population for computing reference panel", file = output.file, append = TRUE)
+            4) There is a severe mismatch between the GWAS population and the population for computing the reference panel", file = output.file, append = TRUE)
       }
 
 
